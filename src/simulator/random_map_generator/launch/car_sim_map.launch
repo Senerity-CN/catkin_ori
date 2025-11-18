@@ -1,0 +1,22 @@
+<launch>
+
+    <!-- <param name="robot_description" textfile="$(find hunter_se_description)/urdf/hunter_se_description.urdf" /> -->
+    <include file="$(find hunter_se_description)/launch/display.launch">
+    </include>
+
+    <!-- map -->
+    <node name="map_server" pkg="map_server" type="map_server" args="$(find random_map_generator)/maps/basement98.yaml"/>
+
+       <!-- 分别是机器人的初始位置x(m)，y(m)和初始朝向(度degree)-->
+    <include file = "$(find turtlebot3_fake)/launch/turtlebot3_fake.launch">
+         <arg name="origin_x_"  value="10"/>
+        <arg name="origin_y_"   value="10"/>
+        <arg name="origin_yaw_" value="90"/> 
+    </include>
+
+
+    <node pkg="tf" type="static_transform_publisher" name="word_map_static_broadcaster" args="0 0 0 0 0 0 map world 100" /> 
+    <node pkg="tf" type="static_transform_publisher" name="map_odom_static_broadcaster" args="0 0 0 0 0 0 map odom 100" /> 
+    <node pkg="tf" type="static_transform_publisher" name="BaseLink_BaseFootprint_static_broadcaster" args="0 0 0 0 0 0 base_footprint base_link 100" /> 
+   <node name="rviz_nav" pkg="rviz" type="rviz" args="-d $(find random_map_generator)/launch/include/basic_rviz/car.rviz" required="true" />
+</launch>

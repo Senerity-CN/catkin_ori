@@ -1,0 +1,18 @@
+<launch>
+
+  <!-- 加载全局配置 -->
+  <rosparam command="load" file="$(find plan_manage)/config/global_config.yaml" />
+
+  <node pkg="plan_manage" type="plan_node" name="plan_node" output="screen" >
+    <rosparam file="$(find plan_manage)/config/planning.yaml" command="load" />
+
+  </node>
+<!-- <node pkg ="plan_manage" name ="controller_node" type ="controller_node" output = "screen">
+    </node> -->
+
+<node pkg ="plan_manage" name ="laser_node" type ="laser_node" output = "screen"> 
+    </node>
+
+<node pkg="tf" type="static_transform_publisher" name="word_map_static_broadcaster" args="0 0 0 0 0 0 map world 100" /> 
+
+</launch>

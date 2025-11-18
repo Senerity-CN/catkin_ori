@@ -1,0 +1,19 @@
+obs_scales:
+  command: [1.0, 2.0]       # [lin_cmd_scale, ang_cmd_scale]
+  lin_vel: [0.67, 3.33, 20.0] # [vx, vy, vz]
+  ang_vel: [1.25, 1.25, 1.43] # [wx, wy, wz]
+  dof_pos: 2.0
+  dof_vel: [0.125, 0.4]     # [main_vel_scale, steering_vel_scale]
+  projected_gravity: 0.1019 # 1.0 / 9.81
+  actions: 1.0              # scale for previous actions in obs
+
+action_scales:
+  first_actionScale: 8.0
+  second_actionScale: 0.5236
+
+robot_params:
+  default_dof_pos_steering: 0.0 # 你的默认关节位置
+
+num_observations: 24 # 模型训练时的观测维度
+num_actions: 2     # 模型训练时的动作维度
+control_frequency: 25.0 # Hz

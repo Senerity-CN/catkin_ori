@@ -1,0 +1,6 @@
+image: map_parking_lot3.png
+resolution: 0.2
+origin: [-0.1, -0.1, 0]
+occupied_thresh: 0.55
+free_thresh: 0.5
+negate: 0

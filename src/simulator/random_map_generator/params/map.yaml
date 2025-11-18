@@ -1,0 +1,11 @@
+random_map:
+    map:
+        obs_num: [1, 2, 3] # num of Triangle, Quadrangle, Pentagon, ...
+        # resolution 从 global_config.yaml 中的 global/map_resolution 读取
+        size_x: 100.0
+        size_y: 100.0
+        min_width: 0.6
+        max_width: 0.7
+        sensor_rate: 30.0
+        sensor_range: 10.0
+        min_dis: 1.9

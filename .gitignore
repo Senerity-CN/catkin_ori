@@ -1,0 +1,72 @@
+# ROS / Catkin 构建产物
+build/
+devel/
+install/
+.catkin_workspace
+*.pyc
+*.pyo
+__pycache__/
+
+# IDE 配置文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 编译产物
+*.o
+*.so
+*.a
+*.dylib
+*.exe
+*.out
+*.app
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# 日志文件
+*.log
+log/
+
+# 临时文件
+*.tmp
+*.bak
+*.orig
+
+# 压缩文件（如果是临时的）
+*.zip
+*.tar.gz
+*.rar
+
+# ROS 特定
+msg_gen/
+srv_gen/
+msg/*Action.msg
+msg/*ActionFeedback.msg
+msg/*ActionGoal.msg
+msg/*ActionResult.msg
+msg/*Feedback.msg
+msg/*Goal.msg
+msg/*Result.msg
+msg/_*.py
+build_isolated/
+devel_isolated/
+
+# Python
+*.egg-info/
+dist/
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# 其他
+.catkin_tools/

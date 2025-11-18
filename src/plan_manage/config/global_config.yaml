@@ -1,0 +1,16 @@
+# 全局统一配置文件
+# 当你更换地图时，只需要修改这个文件中的 map_file 和 map_resolution
+# 所有模块都会自动使用新的配置
+
+global:
+  # 当前使用的地图文件（相对于 random_map_generator/maps/ 的路径）
+  map_file: "map_parking.yaml"
+  
+  # 地图分辨率（米/像素）
+  # 这个值应该与你选择的地图文件中的 resolution 保持一致
+  # 当你更换地图时，记得同步更新这个值
+  map_resolution: 0.6
+  
+  # 地图尺寸
+  map_size_x: 200.0
+  map_size_y: 200.0

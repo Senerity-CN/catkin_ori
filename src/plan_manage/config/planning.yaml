@@ -1,0 +1,42 @@
+# trajectory Optimizer
+mini_T: 0.0
+wei_time_: 500.0
+kmax: 1.0
+vmax: 1.0
+latAccmax: 1.0
+lonAccmax: 1.0
+accRatemax: 1.0
+kdotmax: 20.0
+
+traj_res: 8
+pieceTime: 0.8
+
+rho: 1.0
+rho_max: 1000.0
+gamma: 1.0
+cons_eps_: 0.1
+mem_size: 256
+past: 6
+g_epsilon: 1.0e-3
+min_step: 1.0e-32
+delta: 1.0e-4
+max_iterations: 10000
+amlMaxIter: 15
+conpts: [[0.7, 0.25], [0.7, -0.25], [-0.1, -0.25], [-0.1, 0.25]]
+#map
+# mapRes 从 global_config.yaml 中的 global/map_resolution 读取
+mapX: 200.0
+mapY: 200.0
+expandSize: 0
+
+#hybridastar
+wheel_base: 0.6
+horizon_: 50.0
+yaw_resolution_: 0.1
+lambda_heu_: 1.0
+allocate_num_: 1000000
+check_num_: 5
+max_seach_time: 100.0
+step_arc: 1.0
+checkl: 0.1
+non_siguav: 0.1
