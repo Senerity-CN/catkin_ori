@@ -40,3 +40,13 @@ max_seach_time: 100.0
 step_arc: 1.0
 checkl: 0.1
 non_siguav: 0.1
+
+# Event-driven replanning parameters
+event_driven_replanning:
+  enabled: true
+  obstacle_change_threshold: 10.0      # minimum point count change to trigger replanning
+  tracking_error_threshold: 0.15       # maximum tracking error in meters
+  safety_check_frequency: 10.0         # Hz for safety checks when no events occur
+  obstacle_detection_enabled: true     # enable obstacle change detection
+  min_replan_interval: 0.1             # minimum time between replans in seconds
+  debug_mode: true                     # enable debug output

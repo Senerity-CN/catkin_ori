@@ -17,7 +17,27 @@ void PlanManager::init(ros::NodeHandle &nh)
   kino_path_finder_->intialMap(&gridMap);
   hasTarget = false;
   hasOdom = false;
-  processTimer = nh.createTimer(ros::Duration(0.02), &PlanManager::process, this);
+  
+  // Initialize event-driven replanning parameters
+  nh.param("event_driven_replanning/obstacle_change_threshold", obstacleChangeThreshold_, 10.0);
+  nh.param("event_driven_replanning/tracking_error_threshold", trackingErrorThreshold_, 0.15);
+  nh.param("event_driven_replanning/safety_check_frequency", safetyCheckFrequency_, 10.0);
+  nh.param("event_driven_replanning/obstacle_detection_enabled", obstacleDetectionEnabled_, true);
+  
+  // Initialize event-driven replanning variables
+  needReplan_ = false;
+  trackingErrorDetected_ = false;
+  obstacleChangeDetected_ = false;
+  hasLastPointCloud_ = false;
+  replanTriggerCount_ = 0;
+  lastReplanTime_ = 0.0;
+  totalReplanCount_ = 0;
+  lastReplanReason_ = "none";
+  
+  // Adjust process timer frequency based on safety check frequency
+  double timerFreq = std::max(safetyCheckFrequency_, 5.0); // minimum 5Hz
+  processTimer = nh.createTimer(ros::Duration(1.0 / timerFreq), &PlanManager::process, this);
+  
   targetSub = nh.subscribe("/move_base_simple/goal", 1, &PlanManager::targetCallback, this);
   odomSub = nh.subscribe("/ugv/odometry", 1, &PlanManager::odomCallback, this); // car
   // odomSub = nh.subscribe("/odom", 1, &PlanManager::odomCallback, this); // ball_sim
@@ -30,13 +50,36 @@ void PlanManager::init(ros::NodeHandle &nh)
   Dftpav_path_pub_ = nh.advertise<nav_msgs::Path>("/Dftpav_path", 1);
   ploy_traj_opt_.reset(new PolyTrajOptimizer);
   ploy_traj_opt_->setParam(nh, config_);
+  
+  ROS_INFO("Event-driven replanning initialized: obstacle_threshold=%.1f, tracking_threshold=%.3f, safety_freq=%.1fHz", 
+           obstacleChangeThreshold_, trackingErrorThreshold_, safetyCheckFrequency_);
 }
 void PlanManager::pclCallback(const sensor_msgs::PointCloud2 &pointcloud_map)
 {
   double t1 = ros::Time::now().toSec();
+  
+  // Detect obstacle changes before updating the map
+  if (detectObstacleChange(pointcloud_map)) {
+    obstacleChangeDetected_ = true;
+    needReplan_ = true;
+    lastReplanReason_ = "obstacle_change";
+    replanTriggerCount_++;
+    ROS_INFO("Event-driven replanning triggered by obstacle change (count: %d)", replanTriggerCount_);
+  }
+  
   gridMap.mapUpdate(pointcloud_map);
-  // ROS_INFO("Laser find dynamic obstacle!");
+  
   double t2 = ros::Time::now().toSec();
+  
+  // Debug output for processing time
+  if (obstacleDetectionEnabled_) {
+    static int debugCounter = 0;
+    debugCounter++;
+    if (debugCounter % 100 == 0) { // Print every 100 callbacks
+      ROS_DEBUG("PCL callback processing time: %.3f ms, points: %d", 
+                (t2 - t1) * 1000.0, pointcloud_map.width);
+    }
+  }
 }
 bool isPoseEqual(const geometry_msgs::Pose &a, const geometry_msgs::Pose &b, double p_eps, double rad_eps)
 {
@@ -101,17 +144,38 @@ void PlanManager::odomCallback(const nav_msgs::OdometryPtr &msg)
   static double t0 = ros::Time::now().toSec();
   odom[0] = msg->pose.pose.position.x;
   odom[1] = msg->pose.pose.position.y;
-  // Eigen::Quaterniond q(msg->pose.pose.orientation.w,
-  //                      msg->pose.pose.orientation.x,
-  //                      msg->pose.pose.orientation.y,
-  //                      msg->pose.pose.orientation.z);
-  // Eigen::Matrix3d R(q);
-  // odom[2] = atan2(R.col(0)[1], R.col(0)[0]);
   odom[2] = tf::getYaw(msg->pose.pose.orientation);
   hasOdom = true;
   startPos << msg->pose.pose.position.x, msg->pose.pose.position.y;
   startVel << msg->twist.twist.linear.x, msg->twist.twist.linear.y;
   startAcc << 0.0, 0.0;
+
+  // Real-time tracking error detection
+  if (hasTraj && hasTarget) {
+    double timeNow = ros::Time::now().toSec();
+    double deltaTime = timeNow - trajContainer.startTime;
+    
+    // Check if we have a valid trajectory time
+    if (deltaTime >= 0 && deltaTime <= trajContainer.getTotalDuration()) {
+      Eigen::Vector2d desiredPos = trajContainer.getPos(deltaTime);
+      Eigen::Vector2d currentPos = startPos;
+      double trackingError = (desiredPos - currentPos).norm();
+      
+      if (trackingError > trackingErrorThreshold_) {
+        if (!trackingErrorDetected_) { // Avoid repeated triggers
+          trackingErrorDetected_ = true;
+          needReplan_ = true;
+          lastReplanReason_ = "tracking_error";
+          replanTriggerCount_++;
+          ROS_INFO("Event-driven replanning triggered by tracking error: %.3f > %.3f (count: %d)", 
+                   trackingError, trackingErrorThreshold_, replanTriggerCount_);
+        }
+      } else {
+        // Reset tracking error flag when error is back to normal
+        trackingErrorDetected_ = false;
+      }
+    }
+  }
 
   double t1 = ros::Time::now().toSec();
   return;
@@ -187,13 +251,15 @@ bool PlanManager::checkReplan()
     iniFs << odom, 0.0;
     finFs << targetPose, 0.0;
     useReplanState = false;
+    lastReplanReason_ = "no_trajectory";
     return true;
   }
+  
   double timeNow = ros::Time::now().toSec();
   double deltaTime = timeNow - trajContainer.startTime;
 
-  // collision check
-  for (double t = deltaTime; t <= std::min(deltaTime + 2.5, trajContainer.getTotalDuration()); t += 0.05)
+  // Safety collision check (reduced frequency check)
+  for (double t = deltaTime; t <= std::min(deltaTime + 2.5, trajContainer.getTotalDuration()); t += 0.1)
   {
     Eigen::Vector3d state = trajContainer.getState(t);
     bool isocc = false;
@@ -201,27 +267,29 @@ bool PlanManager::checkReplan()
     if (isocc)
     {
       needReplan = true;
+      lastReplanReason_ = "collision_detected";
+      ROS_WARN("Safety collision check triggered replanning at t=%.2f", t);
+      break;
     }
   }
-  // tracking error - check
+  
+  // Check if approaching end of trajectory
   Eigen::Vector2d desiredPos = trajContainer.getPos(deltaTime);
   Eigen::Vector2d endPos = trajContainer.getPos(trajContainer.getTotalDuration());
-  if ((desiredPos - startPos).norm() > 0.15)
-  {
-    tkReplan_num++;
-    needReplan = true;
-  }
-  // reach tmp goal
   if ((desiredPos - endPos).norm() <= 4.0)
   {
     needReplan = true;
+    lastReplanReason_ = "approaching_goal";
   }
 
   iniFs << odom, 0.0;
   finFs << targetPose, 0.0;
+  
   if (needReplan)
   {
     useReplanState = true;
+    tkReplan_num++;
+    ROS_INFO("Safety check replanning: %s (total count: %d)", lastReplanReason_.c_str(), tkReplan_num);
     return true;
   }
   else
@@ -238,14 +306,50 @@ void PlanManager::process(const ros::TimerEvent &)
   {
     std::cout << "we has reached the target~" << std::endl;
     std::cout << "\033[31m"
-              << "replan number: " << tkReplan_num << std::endl;
+              << "replan number: " << tkReplan_num << " (event-driven triggers: " << replanTriggerCount_ << ")" << std::endl;
     endExeTime = ros::Time::now().toSec();
     std::cout << "execution Time: " << (endExeTime - startExeTime) << " seconds \033[0m" << std::endl;
     hasTarget = false;
+    resetReplanFlags();
     return;
   }
-  if (!checkReplan())
+  
+  // Event-driven replanning logic
+  bool shouldReplan = false;
+  std::string replanReason = "none";
+  
+  // Check for event-driven triggers first
+  if (needReplan_) {
+    shouldReplan = true;
+    replanReason = lastReplanReason_;
+    ROS_INFO("Event-driven replanning triggered: %s", replanReason.c_str());
+  } else {
+    // Perform safety checks at reduced frequency
+    if (checkReplan()) {
+      shouldReplan = true;
+      replanReason = "safety_check";
+    }
+  }
+  
+  if (!shouldReplan) {
+    // Publish debug info even when not replanning
+    publishDebugInfo();
     return;
+  }
+  
+  // Check minimum replan interval to avoid too frequent replanning
+  double currentTime = ros::Time::now().toSec();
+  double minReplanInterval = 0.1; // 100ms minimum interval
+  if (currentTime - lastReplanTime_ < minReplanInterval) {
+    ROS_DEBUG("Replanning skipped due to minimum interval constraint");
+    return;
+  }
+  
+  lastReplanTime_ = currentTime;
+  totalReplanCount_++;
+  
+  // Reset event flags after processing
+  resetReplanFlags();
 
   kino_path_finder_->reset();
   /*front end kino Search*/
@@ -494,4 +598,86 @@ void PlanManager::process(const ros::TimerEvent &)
   // }
 
   // hasTarget = false;
+}
+
+// Event-driven replanning helper functions
+bool PlanManager::detectObstacleChange(const sensor_msgs::PointCloud2 &currentCloud)
+{
+  if (!obstacleDetectionEnabled_) {
+    return false;
+  }
+  
+  if (!hasLastPointCloud_) {
+    lastPointCloud_ = currentCloud;
+    hasLastPointCloud_ = true;
+    return false;
+  }
+  
+  // Simple point count difference check
+  double pointCountDiff = std::abs((double)currentCloud.width - (double)lastPointCloud_.width);
+  
+  if (pointCountDiff > obstacleChangeThreshold_) {
+    ROS_INFO("Obstacle change detected: point count difference = %.1f (threshold: %.1f)", 
+             pointCountDiff, obstacleChangeThreshold_);
+    lastPointCloud_ = currentCloud;
+    return true;
+  }
+  
+  // Update last point cloud periodically to avoid drift
+  static int updateCounter = 0;
+  updateCounter++;
+  if (updateCounter > 50) { // Update every 50 frames
+    lastPointCloud_ = currentCloud;
+    updateCounter = 0;
+  }
+  
+  return false;
+}
+
+void PlanManager::resetReplanFlags()
+{
+  needReplan_ = false;
+  trackingErrorDetected_ = false;
+  obstacleChangeDetected_ = false;
+  lastReplanReason_ = "none";
+}
+
+double PlanManager::calculatePointCloudDifference(const sensor_msgs::PointCloud2 &cloud1, 
+                                                 const sensor_msgs::PointCloud2 &cloud2)
+{
+  // Simple implementation: compare point counts
+  // More sophisticated implementation could compare actual point positions
+  return std::abs((double)cloud1.width - (double)cloud2.width);
+}
+
+void PlanManager::printPerformanceStatistics()
+{
+  static double lastPrintTime = 0.0;
+  double currentTime = ros::Time::now().toSec();
+  
+  // Print statistics every 10 seconds
+  if (currentTime - lastPrintTime > 10.0) {
+    ROS_INFO("=== Event-Driven Replanning Statistics ===");
+    ROS_INFO("Total replans: %d (Event-driven: %d, Safety: %d)", 
+             totalReplanCount_, replanTriggerCount_, tkReplan_num);
+    ROS_INFO("Last replan reason: %s", lastReplanReason_.c_str());
+    ROS_INFO("Obstacle detection enabled: %s", obstacleDetectionEnabled_ ? "true" : "false");
+    ROS_INFO("Thresholds - Obstacle: %.1f, Tracking: %.3f", 
+             obstacleChangeThreshold_, trackingErrorThreshold_);
+    
+    if (hasTarget && hasTraj) {
+      double execTime = currentTime - startExeTime;
+      ROS_INFO("Current execution time: %.2f seconds", execTime);
+    }
+    
+    ROS_INFO("=========================================");
+    lastPrintTime = currentTime;
+  }
+}
+
+void PlanManager::publishDebugInfo()
+{
+  // This function could publish debug markers or status messages
+  // For now, just update performance statistics
+  printPerformanceStatistics();
 }

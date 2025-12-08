@@ -1,0 +1,12 @@
+<launch>
+
+  <!-- 单独启动激光障碍物节点 -->
+  <node pkg="plan_manage" name="laser_node" type="laser_node" output="screen">
+    <!-- 可以在这里添加参数来配置障碍物属性 -->
+    <!-- <param name="center_x" value="10.0"/> -->
+    <!-- <param name="center_y" value="5.0"/> -->
+    <!-- <param name="obstacle_size" value="100"/> -->
+    <!-- <param name="move_speed" value="0.1"/> -->
+  </node>
+
+</launch>

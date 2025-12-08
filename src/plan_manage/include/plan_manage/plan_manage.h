@@ -70,6 +70,33 @@ namespace plan_manage
         // static
         int tkReplan_num = 0;
         double startExeTime, endExeTime;
+
+        // Event-driven replanning variables
+        bool needReplan_;
+        bool trackingErrorDetected_;
+        bool obstacleChangeDetected_;
+        sensor_msgs::PointCloud2 lastPointCloud_;
+        bool hasLastPointCloud_;
+        
+        // Configuration parameters for event-driven replanning
+        double obstacleChangeThreshold_;
+        double trackingErrorThreshold_;
+        double safetyCheckFrequency_;
+        bool obstacleDetectionEnabled_;
+        int replanTriggerCount_;
+        
+        // Performance monitoring
+        double lastReplanTime_;
+        int totalReplanCount_;
+        std::string lastReplanReason_;
+        
+        // Helper functions for event-driven replanning
+        bool detectObstacleChange(const sensor_msgs::PointCloud2 &currentCloud);
+        void resetReplanFlags();
+        double calculatePointCloudDifference(const sensor_msgs::PointCloud2 &cloud1, 
+                                           const sensor_msgs::PointCloud2 &cloud2);
+        void printPerformanceStatistics();
+        void publishDebugInfo();
     };
 }
 

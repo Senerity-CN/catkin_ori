@@ -10,8 +10,9 @@
 <!-- <node pkg ="plan_manage" name ="controller_node" type ="controller_node" output = "screen">
     </node> -->
 
-<node pkg ="plan_manage" name ="laser_node" type ="laser_node" output = "screen"> 
-    </node>
+<!-- laser_node已移至单独的launch文件 laser_obstacle.launch -->
+<!-- <node pkg ="plan_manage" name ="laser_node" type ="laser_node" output = "screen"> 
+    </node> -->
 
 <node pkg="tf" type="static_transform_publisher" name="word_map_static_broadcaster" args="0 0 0 0 0 0 map world 100" /> 
 
