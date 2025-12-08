@@ -7,8 +7,23 @@
     <rosparam file="$(find plan_manage)/config/planning.yaml" command="load" />
 
   </node>
-<!-- <node pkg ="plan_manage" name ="controller_node" type ="controller_node" output = "screen">
-    </node> -->
+<!-- Enhanced Controller Node -->
+<node pkg="plan_manage" name="controller_node" type="controller_node" output="screen">
+    <!-- Simplified PID parameters -->
+    <param name="lateral_kp" value="2.0"/>
+    <param name="lateral_ki" value="0.1"/>
+    <param name="lateral_kd" value="0.5"/>
+    
+    <param name="heading_kp" value="3.0"/>
+    <param name="heading_ki" value="0.2"/>
+    <param name="heading_kd" value="0.8"/>
+    
+    <!-- Basic control parameters -->
+    <param name="max_linear_velocity" value="1.0"/>
+    <param name="max_angular_velocity" value="1.5"/>
+    <param name="lookahead_distance" value="0.5"/>
+    <param name="control_frequency" value="20.0"/>
+</node>
 
 <!-- laser_node已移至单独的launch文件 laser_obstacle.launch -->
 <!-- <node pkg ="plan_manage" name ="laser_node" type ="laser_node" output = "screen"> 
