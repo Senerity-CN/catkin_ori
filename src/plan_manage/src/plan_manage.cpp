@@ -902,6 +902,7 @@ plan_utils::TrajectoryContainer PlanManager::performSmartTrajectorySpicing(
     const plan_utils::TrajectoryContainer& newTrajContainer,
     double replan_duration)
 {
+  ros::spinOnce(); // Ensure ROS callbacks are processed
   // Step 1: Use current odom position (robot's actual current position)
   Eigen::Vector3d actual_current_pos = odom;
   
@@ -931,8 +932,6 @@ plan_utils::TrajectoryContainer PlanManager::performSmartTrajectorySpicing(
   // Step 3: Use adjustable splicing duration
   double splice_duration = splice_duration_; // Use class member variable
   
-  ROS_INFO("Splice duration: %.2fs (distance: %.2fm, avg_speed: %.2fm/s)",
-           splice_duration, distance_to_splice, avg_speed);
   
   // Step 4: Generate 5th-order polynomial coefficients
   double T = splice_duration;

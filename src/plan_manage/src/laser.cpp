@@ -18,9 +18,9 @@ int main(int argc, char **argv)
     double center_x = 15.0;
     double center_y = 7.0;
     double angle = 0.0;
-    double distance = 5.0;      // 障碍物在x方向上的运动距离
+    double distance = 2.0;      // 障碍物在x方向上的运动距离
     double speed = 0.01;         // 运动速度
-    double pos = center_x;      // 当前障碍物位置
+    double pos = center_y;      // 当前障碍物位置
     bool moving_forward = true; // 障碍物是否向前运动
 
     while (ros::ok())
