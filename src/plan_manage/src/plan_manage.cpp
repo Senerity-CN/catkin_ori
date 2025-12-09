@@ -397,7 +397,7 @@ void PlanManager::process(const ros::TimerEvent &)
   vis_tool->visualize_path(visKinoPath, "/visualization/kinoPath");
   
   // Record frontend timing
-  double frontend_time = frontend_timer.toc() / 1000.0;
+  double frontend_time = frontend_timer.toc(); // Already in milliseconds
   recordReplanningTime("frontend", frontend_time);
   ROS_INFO_STREAM("Frontend completed! Time: " << frontend_time << "ms");
 
@@ -481,7 +481,7 @@ void PlanManager::process(const ros::TimerEvent &)
                                                         sfc_container, singul_container, 0.0);
   
   // Record optimization timing
-  double optimization_time = optimization_timer.toc() / 1000.0;
+  double optimization_time = optimization_timer.toc(); // Already in milliseconds
   recordReplanningTime("optimization", optimization_time);
   ROS_INFO_STREAM("Optimization completed! Time: " << optimization_time << "ms");
 
@@ -538,11 +538,11 @@ void PlanManager::process(const ros::TimerEvent &)
   vis_tool->visualize_traj(trajContainer, "/visualization/optTraj");
   
   // Record splicing timing
-  double splicing_time = splicing_timer.toc() / 1000.0;
+  double splicing_time = splicing_timer.toc(); // Already in milliseconds
   recordReplanningTime("splicing", splicing_time);
   
   // Record total timing
-  double total_time = total_time_tool.toc() / 1000.0;
+  double total_time = total_time_tool.toc(); // Already in milliseconds
   recordReplanningTime("total", total_time);
   
   ROS_INFO_STREAM("Trajectory splicing completed! Time: " << splicing_time << "ms");
