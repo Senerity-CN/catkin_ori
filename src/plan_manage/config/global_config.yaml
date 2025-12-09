@@ -4,12 +4,12 @@
 
 global:
   # 当前使用的地图文件（相对于 random_map_generator/maps/ 的路径）
-  map_file: "map_parking.yaml"
+  map_file: "basement98.yaml"
   
   # 地图分辨率（米/像素）
   # 这个值应该与你选择的地图文件中的 resolution 保持一致
   # 当你更换地图时，记得同步更新这个值
-  map_resolution: 0.6
+  map_resolution: 0.2
   
   # 地图尺寸
   map_size_x: 200.0

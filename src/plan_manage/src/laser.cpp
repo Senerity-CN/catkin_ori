@@ -15,11 +15,11 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(10); // 10 Hz
 
     double radius = 4.0;
-    double center_x = 10.0;
-    double center_y = 5.0;
+    double center_x = 15.0;
+    double center_y = 7.0;
     double angle = 0.0;
     double distance = 5.0;      // 障碍物在x方向上的运动距离
-    double speed = 0.1;         // 运动速度
+    double speed = 0.01;         // 运动速度
     double pos = center_x;      // 当前障碍物位置
     bool moving_forward = true; // 障碍物是否向前运动
 
@@ -51,8 +51,8 @@ int main(int argc, char **argv)
             // double obstacle_y = center_y + radius * std::sin(angle);
 
             // 直线 障碍物位置
-            double obstacle_x = pos;
-            double obstacle_y = center_y;
+            double obstacle_x = center_x;
+            double obstacle_y = pos;
 
             // 在障碍物中心附近随机生成点云
             *iter_x = obstacle_x + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 0.2 - 0.1;
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
         if (moving_forward)
         {
             pos += speed;
-            if (pos >= center_x + distance)
+            if (pos >= center_y + distance)
             {
                 moving_forward = false;
             }
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
         else
         {
             pos -= speed;
-            if (pos <= center_x)
+            if (pos <= center_y)
             {
                 moving_forward = true;
             }

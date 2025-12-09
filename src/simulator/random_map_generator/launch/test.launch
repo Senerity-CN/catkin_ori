@@ -24,8 +24,8 @@
     <remap from="~global_cloud" to="$(arg map_topic)"/>
   </node> -->
 
-<node name="map_server" pkg="map_server" type="map_server" args="$(find random_map_generator)/maps/map_parking.yaml"/>
-<!-- <node name="map_server" pkg="map_server" type="map_server" args="$(find random_map_generator)/maps/basement98.yaml"/> -->
+<!-- <node name="map_server" pkg="map_server" type="map_server" args="$(find random_map_generator)/maps/map_parking.yaml"/> -->
+<node name="map_server" pkg="map_server" type="map_server" args="$(find random_map_generator)/maps/basement98.yaml"/>
 
 <!-- <include file = "$(find turtlebot3_fake)/launch/turtlebot3_fake.launch">
          <arg name="origin_x_"  value="5"/>
