@@ -95,6 +95,8 @@ namespace plan_manage
         double splicingTime_;
         Eigen::Vector3d splicingStartState_;
         Eigen::Vector3d splicingStartVel_;
+        double replanStartTime_;
+        Eigen::Vector3d robotStateAtReplanStart_;
         
         // Timing statistics
         struct ReplanningStats {
@@ -122,6 +124,17 @@ namespace plan_manage
             double splicing_time);
         Eigen::Vector3d findSplicingPoint(double time_offset);
         void recordReplanningTime(const std::string& phase, double time_ms);
+        
+        // Enhanced trajectory splicing functions
+        Eigen::Vector3d predictCurrentRobotState(double replan_duration);
+        double calculateOptimalSplicingTime(const Eigen::Vector2d& current_vel);
+        plan_utils::TrajectoryContainer createPolynomialTrajectory(
+            const Eigen::VectorXd& coeff_x, 
+            const Eigen::VectorXd& coeff_y, 
+            double duration);
+        plan_utils::TrajectoryContainer performSmartTrajectorySpicing(
+            const plan_utils::TrajectoryContainer& newTrajContainer,
+            double replan_duration);
     };
 }
 
