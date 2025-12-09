@@ -83,7 +83,7 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
-    - Angle Tolerance: 9.999999747378752e-05
+    - Angle Tolerance: 0.0500000007
       Class: rviz/Odometry
       Covariance:
         Orientation:
@@ -95,26 +95,26 @@ Visualization Manager:
           Scale: 1
           Value: true
         Position:
-          Alpha: 0.30000001192092896
+          Alpha: 0.300000012
           Color: 204; 51; 204
           Scale: 1
           Value: true
-        Value: true
+        Value: false
       Enabled: true
-      Keep: 1
+      Keep: 100000
       Name: Odometry
-      Position Tolerance: 9.999999747378752e-05
+      Position Tolerance: 0.0500000007
       Queue Size: 10
       Shape:
         Alpha: 1
-        Axes Length: 0.30000001192092896
-        Axes Radius: 0.10000000149011612
-        Color: 255; 25; 0
-        Head Length: 0.30000001192092896
-        Head Radius: 0.10000000149011612
-        Shaft Length: 1
-        Shaft Radius: 0.05000000074505806
-        Value: Axes
+        Axes Length: 1
+        Axes Radius: 0.100000001
+        Color: 255; 43; 75
+        Head Length: 0.150000006
+        Head Radius: 0.100000001
+        Shaft Length: 0.200000003
+        Shaft Radius: 0.0199999996
+        Value: Arrow
       Topic: /ugv/odometry
       Unreliable: false
       Value: true
@@ -180,14 +180,77 @@ Visualization Manager:
       Topic: /visualization/optTraj
       Unreliable: false
       Value: true
-    - Class: rviz/Marker
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
       Enabled: true
-      Marker Topic: /ugv/mesh
-      Name: ackmanCar
-      Namespaces:
-        "": true
-      Queue Size: 100
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        arrow:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base_footprint:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base_spherical_center:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base_spherical_center_high:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base_spherical_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base_spherical_roll:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base_spherical_yaw:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        laser_l:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        laser_r:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        robo_camera:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: RobotModel
+      Robot Description: robot_description
+      TF Prefix: ""
+      Update Interval: 0
       Value: true
+      Visual Enabled: true
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /reference_path
