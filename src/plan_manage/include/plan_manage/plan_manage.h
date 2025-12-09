@@ -99,6 +99,10 @@ namespace plan_manage
         double replanStartTime_;
         Eigen::Vector3d robotStateAtReplanStart_;
         
+        // Adjustable splicing parameters
+        double splice_time_param_;     // Time into new trajectory for splice point (adjustable)
+        double splice_duration_;       // Duration of splicing trajectory (adjustable)
+        
         // Timing statistics
         struct ReplanningStats {
             double frontend_time_ms;

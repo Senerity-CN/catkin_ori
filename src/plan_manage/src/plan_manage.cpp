@@ -49,6 +49,10 @@ void PlanManager::init(ros::NodeHandle &nh)
   replan_stats_.total_time_ms = 0.0;
   replan_stats_.replan_count = 0;
   
+  // Initialize adjustable splicing parameters from config
+  nh.param("trajectory_splicing/splice_time_param", splice_time_param_, 1.0);
+  nh.param("trajectory_splicing/splice_duration", splice_duration_, 0.8);
+  
   // Adjust process timer frequency based on safety check frequency
   double timerFreq = std::max(safetyCheckFrequency_, 5.0); // minimum 5Hz
   processTimer = nh.createTimer(ros::Duration(1.0 / timerFreq), &PlanManager::process, this);
@@ -69,6 +73,8 @@ void PlanManager::init(ros::NodeHandle &nh)
   
   ROS_INFO("Event-driven replanning initialized: obstacle_threshold=%.1f, tracking_threshold=%.3f, safety_freq=%.1fHz", 
            obstacleChangeThreshold_, trackingErrorThreshold_, safetyCheckFrequency_);
+  ROS_INFO("Trajectory splicing parameters: splice_time=%.2fs, splice_duration=%.2fs", 
+           splice_time_param_, splice_duration_);
 }
 void PlanManager::pclCallback(const sensor_msgs::PointCloud2 &pointcloud_map)
 {
@@ -906,26 +912,24 @@ plan_utils::TrajectoryContainer PlanManager::performSmartTrajectorySpicing(
            actual_current_pos[0], actual_current_pos[1], 
            actual_current_vel[0], actual_current_vel[1]);
   
-  // Step 2: Calculate optimal splicing time and point
-  double lookahead_time = calculateOptimalSplicingTime(actual_current_vel);
+  // Step 2: Use adjustable time parameter for splicing point
+  double splice_time_param = splice_time_param_; // Use class member variable
   
-  // Ensure lookahead_time doesn't exceed new trajectory duration
-  if (lookahead_time > newTrajContainer.getTotalDuration()) {
-    lookahead_time = newTrajContainer.getTotalDuration() * 0.5;
+  // Ensure splice time doesn't exceed new trajectory duration
+  if (splice_time_param > newTrajContainer.getTotalDuration()) {
+    splice_time_param = newTrajContainer.getTotalDuration() * 0.3;
   }
   
   // Get target splicing point from new trajectory
-  Eigen::Vector3d target_splice_pos = newTrajContainer.getState(lookahead_time);
-  Eigen::Vector2d target_splice_vel = newTrajContainer.getdSigma(lookahead_time);
+  Eigen::Vector3d target_splice_pos = newTrajContainer.getState(splice_time_param);
+  Eigen::Vector2d target_splice_vel = newTrajContainer.getdSigma(splice_time_param);
   
   ROS_INFO("Splicing to new trajectory at t=%.2fs, pos=[%.2f, %.2f], vel=[%.2f, %.2f]",
-           lookahead_time, target_splice_pos[0], target_splice_pos[1],
+           splice_time_param, target_splice_pos[0], target_splice_pos[1],
            target_splice_vel[0], target_splice_vel[1]);
   
-  // Step 3: Calculate splicing duration (dynamic based on distance and speed)
-  double distance_to_splice = (target_splice_pos.head(2) - actual_current_pos.head(2)).norm();
-  double avg_speed = (actual_current_vel.norm() + target_splice_vel.norm()) / 2.0;
-  double splice_duration = std::max(0.3, std::min(1.5, distance_to_splice / std::max(avg_speed, 0.1)));
+  // Step 3: Use adjustable splicing duration
+  double splice_duration = splice_duration_; // Use class member variable
   
   ROS_INFO("Splice duration: %.2fs (distance: %.2fm, avg_speed: %.2fm/s)",
            splice_duration, distance_to_splice, avg_speed);
@@ -952,6 +956,23 @@ plan_utils::TrajectoryContainer PlanManager::performSmartTrajectorySpicing(
   Eigen::VectorXd coeff_y = A.colPivHouseholderQr().solve(b_y);
   
   ROS_INFO("Polynomial coefficients computed successfully");
+  
+  // Debug: Verify polynomial at boundaries
+  double start_x = coeff_x[0];
+  double start_y = coeff_y[0];
+  double end_x = 0.0, end_y = 0.0;
+  double T_pow = 1.0;
+  for (int j = 0; j <= 5; j++) {
+    end_x += coeff_x[j] * T_pow;
+    end_y += coeff_y[j] * T_pow;
+    T_pow *= T;
+  }
+  
+  ROS_INFO("Splicing trajectory verification:");
+  ROS_INFO("  Start: expected=[%.2f, %.2f], polynomial=[%.2f, %.2f]", 
+           actual_current_pos[0], actual_current_pos[1], start_x, start_y);
+  ROS_INFO("  End: expected=[%.2f, %.2f], polynomial=[%.2f, %.2f]", 
+           target_splice_pos[0], target_splice_pos[1], end_x, end_y);
   
   // Step 5: Publish visualization of splicing trajectory
   publishSplicingTrajectory(coeff_x, coeff_y, splice_duration, actual_current_pos);
@@ -987,11 +1008,11 @@ void PlanManager::publishSplicingTrajectory(const Eigen::VectorXd& coeff_x, cons
   for (int i = 0; i <= num_points; i++) {
     double t = std::min(i * dt, duration);
     
-    // Calculate position using 5th-order polynomial
+    // Calculate position using 5th-order polynomial: c0 + c1*t + c2*t^2 + ... + c5*t^5
     double x = 0.0, y = 0.0;
     double t_pow = 1.0;
     
-    for (int j = 5; j >= 0; j--) {
+    for (int j = 0; j <= 5; j++) {
       x += coeff_x[j] * t_pow;
       y += coeff_y[j] * t_pow;
       t_pow *= t;
@@ -1004,13 +1025,13 @@ void PlanManager::publishSplicingTrajectory(const Eigen::VectorXd& coeff_x, cons
     pose.pose.position.y = y;
     pose.pose.position.z = 0.1; // Slightly above ground for visibility
     
-    // Calculate heading from velocity (derivative of position)
+    // Calculate heading from velocity (derivative of position): c1 + 2*c2*t + 3*c3*t^2 + ...
     if (i < num_points) {
       double vx = 0.0, vy = 0.0;
-      t_pow = 1.0;
-      for (int j = 4; j >= 0; j--) {
-        vx += (5-j) * coeff_x[j] * t_pow;
-        vy += (5-j) * coeff_y[j] * t_pow;
+      double t_pow = 1.0;
+      for (int j = 1; j <= 5; j++) {
+        vx += j * coeff_x[j] * t_pow;
+        vy += j * coeff_y[j] * t_pow;
         t_pow *= t;
       }
       double yaw = std::atan2(vy, vx);

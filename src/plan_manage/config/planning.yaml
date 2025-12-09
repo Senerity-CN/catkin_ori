@@ -50,3 +50,8 @@ event_driven_replanning:
   obstacle_detection_enabled: true     # enable obstacle change detection
   min_replan_interval: 0.1             # minimum time between replans in seconds
   debug_mode: true                     # enable debug output
+
+# Trajectory splicing parameters
+trajectory_splicing:
+  splice_time_param: 1.0               # time (seconds) into new trajectory for splice point
+  splice_duration: 0.8                 # duration (seconds) of splicing trajectory
