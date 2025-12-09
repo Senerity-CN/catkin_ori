@@ -335,6 +335,12 @@ void PlanManager::process(const ros::TimerEvent &)
   if (needReplan_) {
     shouldReplan = true;
     replanReason = lastReplanReason_;
+    
+    // Set initial and final states for event-driven replanning
+    iniFs << odom, 0.0;
+    finFs << targetPose, 0.0;
+    useReplanState = true;
+    
     ROS_INFO("Event-driven replanning triggered: %s", replanReason.c_str());
   } else {
     // Perform safety checks at reduced frequency
@@ -373,7 +379,8 @@ void PlanManager::process(const ros::TimerEvent &)
   TicToc frontend_timer; // 混合A*规划计时器
   frontend_timer.tic();
   path_searching::KinoTrajData kino_trajs_;
-  std::cout << "iniFs: " << iniFs.transpose() << " finFs: " << finFs.transpose() << std::endl;
+  ROS_INFO("Planning from [%.2f, %.2f, %.2f] to [%.2f, %.2f, %.2f] (reason: %s)", 
+           iniFs[0], iniFs[1], iniFs[2], finFs[0], finFs[1], finFs[2], lastReplanReason_.c_str());
 
   // 调用kino_path_finder_对象的search方法，以iniFs为起始状态，以finFs为终止状态，进行路径搜索。如果成功找到一条路径，那么就会返回KinoAstar::VALID，即表示路径有效。
   int status = kino_path_finder_->search(iniFs, Eigen::Vector2d::Zero(), finFs, false);
@@ -473,8 +480,12 @@ void PlanManager::process(const ros::TimerEvent &)
   TicToc optimization_timer;
   optimization_timer.tic();
 
-  // if (useReplanState)
-  //   iniState_container[0] << startPos, startVel, startAcc;
+  // Update initial state for replanning to use current position
+  if (useReplanState) {
+    iniState_container[0] << startPos, startVel, startAcc;
+    ROS_INFO("Replanning from current position: [%.2f, %.2f] with vel: [%.2f, %.2f]", 
+             startPos[0], startPos[1], startVel[0], startVel[1]);
+  }
 
   int flag_success = ploy_traj_opt_->OptimizeTrajectory(iniState_container, finState_container,
                                                         waypoints_container, duration_container,
