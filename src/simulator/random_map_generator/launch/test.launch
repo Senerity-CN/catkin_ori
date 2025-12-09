@@ -19,9 +19,12 @@
   <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
   
+  <!-- 发布动态odom到base_link的TF变换 -->
+  <node pkg="random_map_generator" type="odom_tf_publisher.py" name="odom_tf_publisher" output="screen" />
+  
   <!-- 添加必要的TF变换 -->
+  <node pkg="tf" type="static_transform_publisher" name="world_map_broadcaster" args="0 0 0 0 0 0 world map 100" />
   <node pkg="tf" type="static_transform_publisher" name="map_odom_static_broadcaster" args="0 0 0 0 0 0 map odom 100" />
-  <node pkg="tf" type="static_transform_publisher" name="BaseLink_BaseFootprint_static_broadcaster" args="0 0 0 0 0 0 base_footprint base_link 100" />
    
   <node pkg="kinematics_simulator" type="kinematics_simulator_node" name="kinematics_simulator_node" output="screen" required="true">
     <remap from ="~cmd" to="$(arg cmd_topic)"/>
