@@ -1,0 +1,200 @@
+<?xml version="1.0"?>
+<robot name="myball">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <sphere radius="0.3"/>
+    </geometry>
+    <origin rpy="0 0 0" xyz="0 0 0.3"/>
+    <material name="blue">
+        <color rgba="1 1 1 1"/>
+    </material>
+    </visual>
+ </link>
+
+ <link name="base_footprint">
+    <visual>
+      <geometry>
+        <cylinder length=".02" radius="0.25"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0 0 0 1"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="base_footprint_joint" type="fixed">
+    <axis xyz="0 0 1"/>
+    <parent link="base_link"/>
+    <child link="base_footprint"/>
+    <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+  </joint>
+
+  <link name="base_spherical_center">
+    <visual>
+      <geometry>
+        <cylinder length=".02" radius="0.25"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0 0 0 1"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="base_spherical_center_joint" type="fixed">
+    <axis xyz="0 0 1"/>
+    <parent link="base_link"/>
+    <child link="base_spherical_center"/>
+    <origin rpy="0 0 0" xyz="0.0 0.0 0.3"/>
+  </joint>
+
+  <link name="base_spherical_yaw">
+    <visual>
+      <geometry>
+        <cylinder length=".02" radius="0.01"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0 0 0 0"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="base_spherical_yaw_joint" type="revolute">
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="100" velocity="10"/>
+    <parent link="base_spherical_center"/>
+    <child link="base_spherical_yaw"/>
+    <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+  </joint>
+
+
+  <link name="base_spherical_pitch">
+    <visual>
+      <geometry>
+        <cylinder length=".02" radius="0.01"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0 0 0 0"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="base_spherical_pitch_joint" type="revolute">
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="100" velocity="10"/>
+    <parent link="base_spherical_yaw"/>
+    <child link="base_spherical_pitch"/>
+    <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+  </joint>
+
+
+  <link name="base_spherical_roll">
+    <visual>
+      <geometry>
+        <cylinder length=".02" radius="0.01"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0 0 0 0"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="base_spherical_roll_joint" type="revolute">
+    <axis xyz="1 0 0"/>
+    <limit lower="-1.57" upper="1.57" effort="100" velocity="10"/>
+    <parent link="base_spherical_pitch"/>
+    <child link="base_spherical_roll"/>
+    <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+  </joint>
+
+
+
+  <link name="robo_camera">
+    <visual>
+      <geometry>
+        <box size=".04 .05 .03"/>
+      </geometry>
+      <material name="white">
+          <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="robo_camera"/>
+    <origin xyz="0 0.25 0.25"/>
+  </joint>
+
+
+
+  <link name="laser_r">
+    <visual>
+      <geometry>
+        <box size=".05 .1 .03"/>
+      </geometry>
+      <material name="green">
+          <color rgba="0 1 0 1"/>
+      </material>
+    </visual>
+  </link>
+
+  <link name="laser_l">
+    <visual>
+      <geometry>
+        <box size=".05 .1 .03"/>
+      </geometry>
+      <material name="green">
+          <color rgba="0 1 0 1"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="laser_joint_r" type="fixed">
+    <parent link="base_spherical_roll"/>
+    <child link="laser_r"/>
+    <origin xyz="0 -0.26 0.15"  rpy="0 0.0 0" />
+  </joint>
+
+  <joint name="laser_joint_l" type="fixed">
+    <parent link="base_spherical_roll"/>
+    <child link="laser_l"/>
+    <origin xyz="0 0.26 0.15" rpy="0 0.0 0" />
+  </joint>
+
+  <link name="arrow">
+    <visual>
+      <geometry>
+        <box size=".4 .03 .03"/>
+      </geometry>
+      <material name="black">
+          <color rgba="0 0 0 1"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="arrow_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="arrow"/>
+    <origin xyz="0.25 0 0.25"/>
+  </joint>
+  
+  <link name="base_spherical_center_high">
+    <visual>
+      <geometry>
+        <cylinder length=".01" radius="0.01"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0 0 0 1"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="base_spherical_center_high_joint" type="fixed">
+    <axis xyz="0 0 1.2"/>
+    <parent link="base_link"/>
+    <child link="base_spherical_center_high"/>
+    <origin rpy="0 0 0" xyz="0.0 0.0 1"/>
+  </joint>
+
+</robot>

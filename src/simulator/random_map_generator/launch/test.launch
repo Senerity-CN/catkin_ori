@@ -11,6 +11,17 @@
   <rosparam command="load" file="$(find plan_manage)/config/global_config.yaml" />
   <rosparam command="load" file="$(find kinematics_simulator)/params/simulator.yaml" />
   <rosparam command="load" file="$(find random_map_generator)/params/map.yaml" />
+  
+  <!-- 加载机器人模型描述 -->
+  <param name="robot_description" textfile="$(find random_map_generator)/rviz/my_ball.urdf" />
+  
+  <!-- 启动必要的ROS节点用于机器人模型显示 -->
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+  
+  <!-- 添加必要的TF变换 -->
+  <node pkg="tf" type="static_transform_publisher" name="map_odom_static_broadcaster" args="0 0 0 0 0 0 map odom 100" />
+  <node pkg="tf" type="static_transform_publisher" name="BaseLink_BaseFootprint_static_broadcaster" args="0 0 0 0 0 0 base_footprint base_link 100" />
    
   <node pkg="kinematics_simulator" type="kinematics_simulator_node" name="kinematics_simulator_node" output="screen" required="true">
     <remap from ="~cmd" to="$(arg cmd_topic)"/>

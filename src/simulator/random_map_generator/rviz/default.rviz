@@ -190,57 +190,52 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        arrow:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        base_footprint:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         base_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        base_spherical_center:
+        base_link_car_livox:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        base_spherical_center_high:
+        fr_steer_left_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        base_spherical_pitch:
+        fr_left_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        base_spherical_roll:
+        fr_steer_right_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        base_spherical_yaw:
+        fr_right_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        laser_l:
+        re_left_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        laser_r:
+        re_right_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        robo_camera:
+        front_steer_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        rear_wheel_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
