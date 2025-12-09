@@ -509,29 +509,26 @@ void PlanManager::process(const ros::TimerEvent &)
   if (hasTraj && useReplanState) {
     // Find splicing point (1 second ahead)
     Eigen::Vector3d splicing_point = findSplicingPoint(splicingTime_);
-    Eigen::Vector3d splicing_vel = trajContainer.getVel(splicingTime_);
+    
+    // Get velocity at splicing point using getdSigma (2D velocity)
+    Eigen::Vector2d vel_2d = trajContainer.getdSigma(splicingTime_);
+    Eigen::Vector3d splicing_vel(vel_2d[0], vel_2d[1], 0); // Convert to 3D
     
     // Get target state from new trajectory
     Eigen::Vector3d target_state = newTrajContainer.getState(0.5); // 0.5s into new trajectory
-    Eigen::Vector3d target_vel = newTrajContainer.getVel(0.5);
+    
+    // Get target velocity using getdSigma
+    Eigen::Vector2d target_vel_2d = newTrajContainer.getdSigma(0.5);
+    Eigen::Vector3d target_vel(target_vel_2d[0], target_vel_2d[1], 0); // Convert to 3D
     
     // Generate splicing trajectory using 5th-order polynomial
     plan_utils::TrajectoryContainer splicingTraj = generateSplicingTrajectory(
         splicing_point, splicing_vel, target_state, target_vel, splicingTime_);
     
     // Combine trajectories: current -> splicing -> new
-    trajContainer.clear();
-    
-    // Add current trajectory up to splicing point
-    double currentTime = ros::Time::now().toSec() - trajContainer.startTime;
-    if (currentTime < splicingTime_) {
-      // Keep current trajectory until splicing point
-      // Then add splicing trajectory
-      // Finally add new trajectory
-      trajContainer = newTrajContainer; // Simplified for now
-    } else {
-      trajContainer = newTrajContainer;
-    }
+    // For now, use simplified approach: direct replacement with new trajectory
+    // The splicing trajectory generation is prepared but not fully integrated
+    trajContainer = newTrajContainer;
   } else {
     trajContainer = newTrajContainer;
   }
@@ -744,12 +741,12 @@ void PlanManager::printPerformanceStatistics()
     ROS_INFO("Last replan reason: %s", lastReplanReason_.c_str());
     
     if (replan_stats_.replan_count > 0) {
-      double avg_frontend = replan_stats_.frontend_time_ms / replan_stats_.replan_count;
-      double avg_optimization = replan_stats_.optimization_time_ms / replan_stats_.replan_count;
-      double avg_splicing = replan_stats_.splicing_time_ms / replan_stats_.replan_count;
-      double avg_total = replan_stats_.total_time_ms / replan_stats_.replan_count;
+      double avg_frontend = replan_stats_.frontend_time_ms;
+      double avg_optimization = replan_stats_.optimization_time_ms;
+      double avg_splicing = replan_stats_.splicing_time_ms;
+      double avg_total = replan_stats_.total_time_ms;
       
-      ROS_INFO("Average timing (ms): Frontend: %.2f, Optimization: %.2f, Splicing: %.2f, Total: %.2f",
+      ROS_INFO("Latest timing (ms): Frontend: %.2f, Optimization: %.2f, Splicing: %.2f, Total: %.2f",
                avg_frontend, avg_optimization, avg_splicing, avg_total);
     }
     
