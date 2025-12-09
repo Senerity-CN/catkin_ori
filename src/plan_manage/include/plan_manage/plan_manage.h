@@ -56,6 +56,7 @@ namespace plan_manage
         ros::Timer processTimer;
         ros::Subscriber targetSub, odomSub, pclSub, gridmap_sub_;
         ros::Publisher trajCmdPub, Dftpav_path_pub_, x_pub, y_pub, z_pub;
+        ros::Publisher splicing_traj_pub_;
 
         PolyTrajOptimizer::Ptr ploy_traj_opt_;
 
@@ -126,7 +127,6 @@ namespace plan_manage
         void recordReplanningTime(const std::string& phase, double time_ms);
         
         // Enhanced trajectory splicing functions
-        Eigen::Vector3d predictCurrentRobotState(double replan_duration);
         double calculateOptimalSplicingTime(const Eigen::Vector2d& current_vel);
         plan_utils::TrajectoryContainer createPolynomialTrajectory(
             const Eigen::VectorXd& coeff_x, 
@@ -135,6 +135,10 @@ namespace plan_manage
         plan_utils::TrajectoryContainer performSmartTrajectorySpicing(
             const plan_utils::TrajectoryContainer& newTrajContainer,
             double replan_duration);
+        
+        // Visualization functions for trajectory splicing
+        void publishSplicingTrajectory(const Eigen::VectorXd& coeff_x, const Eigen::VectorXd& coeff_y, 
+                                     double duration, const Eigen::Vector3d& start_pos);
     };
 }
 

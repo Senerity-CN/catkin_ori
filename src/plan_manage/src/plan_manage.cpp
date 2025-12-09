@@ -63,6 +63,7 @@ void PlanManager::init(ros::NodeHandle &nh)
   vis_tool->registe<decomp_ros_msgs::PolyhedronArray>("/visualization/sfc");
   pieceTime = config_->pieceTime;
   Dftpav_path_pub_ = nh.advertise<nav_msgs::Path>("/Dftpav_path", 1);
+  splicing_traj_pub_ = nh.advertise<nav_msgs::Path>("/visualization/splicing_trajectory", 1);
   ploy_traj_opt_.reset(new PolyTrajOptimizer);
   ploy_traj_opt_->setParam(nh, config_);
   
@@ -867,24 +868,6 @@ void PlanManager::recordReplanningTime(const std::string& phase, double time_ms)
 }
 
 // Enhanced trajectory splicing implementation
-Eigen::Vector3d PlanManager::predictCurrentRobotState(double replan_duration)
-{
-  if (!hasTraj) {
-    return odom; // Fallback to current odometry
-  }
-  
-  // Calculate how much time has passed since replanning started
-  double elapsed_time = replan_duration;
-  
-  // Predict robot position based on original trajectory
-  double original_traj_time = elapsed_time;
-  if (original_traj_time > trajContainer.getTotalDuration()) {
-    original_traj_time = trajContainer.getTotalDuration();
-  }
-  
-  return trajContainer.getState(original_traj_time);
-}
-
 double PlanManager::calculateOptimalSplicingTime(const Eigen::Vector2d& current_vel)
 {
   double current_speed = current_vel.norm();
@@ -913,22 +896,13 @@ plan_utils::TrajectoryContainer PlanManager::performSmartTrajectorySpicing(
     const plan_utils::TrajectoryContainer& newTrajContainer,
     double replan_duration)
 {
-  // Step 1: Predict current robot state
-  Eigen::Vector3d actual_current_pos = predictCurrentRobotState(replan_duration);
+  // Step 1: Use current odom position (robot's actual current position)
+  Eigen::Vector3d actual_current_pos = odom;
   
-  // Get current velocity from original trajectory or use finite difference
-  Eigen::Vector2d actual_current_vel;
-  if (replan_duration < trajContainer.getTotalDuration()) {
-    actual_current_vel = trajContainer.getdSigma(replan_duration);
-  } else {
-    // Use finite difference as fallback
-    double dt = 0.01;
-    Eigen::Vector3d pos1 = trajContainer.getState(std::max(0.0, replan_duration - dt));
-    Eigen::Vector3d pos2 = trajContainer.getState(std::min(trajContainer.getTotalDuration(), replan_duration + dt));
-    actual_current_vel = (pos2.head(2) - pos1.head(2)) / (2 * dt);
-  }
+  // Get current velocity from odom or use current velocity measurement
+  Eigen::Vector2d actual_current_vel = startVel; // Use measured velocity from odom callback
   
-  ROS_INFO("Robot predicted position: [%.2f, %.2f], velocity: [%.2f, %.2f]",
+  ROS_INFO("Robot actual position (odom): [%.2f, %.2f], velocity: [%.2f, %.2f]",
            actual_current_pos[0], actual_current_pos[1], 
            actual_current_vel[0], actual_current_vel[1]);
   
@@ -979,7 +953,10 @@ plan_utils::TrajectoryContainer PlanManager::performSmartTrajectorySpicing(
   
   ROS_INFO("Polynomial coefficients computed successfully");
   
-  // Step 5: For now, return the new trajectory with adjusted start time
+  // Step 5: Publish visualization of splicing trajectory
+  publishSplicingTrajectory(coeff_x, coeff_y, splice_duration, actual_current_pos);
+  
+  // For now, return the new trajectory with adjusted start time
   // In a complete implementation, you would create the transition trajectory
   // and concatenate it with the remaining part of the new trajectory
   
@@ -994,3 +971,59 @@ plan_utils::TrajectoryContainer PlanManager::performSmartTrajectorySpicing(
   
   return splicedTraj;
 }
+
+// Visualization functions for trajectory splicing
+void PlanManager::publishSplicingTrajectory(const Eigen::VectorXd& coeff_x, const Eigen::VectorXd& coeff_y, 
+                                          double duration, const Eigen::Vector3d& start_pos)
+{
+  nav_msgs::Path splicing_path;
+  splicing_path.header.frame_id = "world";
+  splicing_path.header.stamp = ros::Time::now();
+  
+  // Generate trajectory points using polynomial coefficients
+  double dt = 0.05; // 50ms intervals for smooth visualization
+  int num_points = static_cast<int>(duration / dt) + 1;
+  
+  for (int i = 0; i <= num_points; i++) {
+    double t = std::min(i * dt, duration);
+    
+    // Calculate position using 5th-order polynomial
+    double x = 0.0, y = 0.0;
+    double t_pow = 1.0;
+    
+    for (int j = 5; j >= 0; j--) {
+      x += coeff_x[j] * t_pow;
+      y += coeff_y[j] * t_pow;
+      t_pow *= t;
+    }
+    
+    geometry_msgs::PoseStamped pose;
+    pose.header.frame_id = "world";
+    pose.header.stamp = ros::Time::now();
+    pose.pose.position.x = x;
+    pose.pose.position.y = y;
+    pose.pose.position.z = 0.1; // Slightly above ground for visibility
+    
+    // Calculate heading from velocity (derivative of position)
+    if (i < num_points) {
+      double vx = 0.0, vy = 0.0;
+      t_pow = 1.0;
+      for (int j = 4; j >= 0; j--) {
+        vx += (5-j) * coeff_x[j] * t_pow;
+        vy += (5-j) * coeff_y[j] * t_pow;
+        t_pow *= t;
+      }
+      double yaw = std::atan2(vy, vx);
+      pose.pose.orientation.z = std::sin(yaw / 2.0);
+      pose.pose.orientation.w = std::cos(yaw / 2.0);
+    }
+    
+    splicing_path.poses.push_back(pose);
+  }
+  
+  splicing_traj_pub_.publish(splicing_path);
+  
+  ROS_INFO("Published splicing trajectory with %d points (duration: %.2fs)", 
+           static_cast<int>(splicing_path.poses.size()), duration);
+}
+
