@@ -266,11 +266,8 @@ void EnhancedController::controlLoop(const ros::TimerEvent& event) {
     total_tracking_error_ += tracking_error;
     control_iterations_++;
     
-    // Simplified debug output
-    if (control_iterations_ % 100 == 0) {  // Print every 5 seconds at 20Hz
-        ROS_INFO("Control: lat_err=%.3f, head_err=%.3f, v=%.2f, w=%.2f", 
-                 lateral_error, heading_error, cmd_vel.linear.x, cmd_vel.angular.z);
-    }
+    // Remove debug output to reduce terminal clutter
+    // Debug info removed for cleaner output
 }
 
 geometry_msgs::Pose EnhancedController::findLookaheadPoint() {

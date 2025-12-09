@@ -90,6 +90,21 @@ namespace plan_manage
         int totalReplanCount_;
         std::string lastReplanReason_;
         
+        // Trajectory splicing variables
+        bool needTrajectorySpicing_;
+        double splicingTime_;
+        Eigen::Vector3d splicingStartState_;
+        Eigen::Vector3d splicingStartVel_;
+        
+        // Timing statistics
+        struct ReplanningStats {
+            double frontend_time_ms;
+            double optimization_time_ms;
+            double splicing_time_ms;
+            double total_time_ms;
+            int replan_count;
+        } replan_stats_;
+        
         // Helper functions for event-driven replanning
         bool detectObstacleChange(const sensor_msgs::PointCloud2 &currentCloud);
         void resetReplanFlags();
@@ -97,6 +112,16 @@ namespace plan_manage
                                            const sensor_msgs::PointCloud2 &cloud2);
         void printPerformanceStatistics();
         void publishDebugInfo();
+        
+        // Trajectory splicing functions
+        plan_utils::TrajectoryContainer generateSplicingTrajectory(
+            const Eigen::Vector3d& current_state, 
+            const Eigen::Vector3d& current_vel,
+            const Eigen::Vector3d& target_state,
+            const Eigen::Vector3d& target_vel,
+            double splicing_time);
+        Eigen::Vector3d findSplicingPoint(double time_offset);
+        void recordReplanningTime(const std::string& phase, double time_ms);
     };
 }
 
