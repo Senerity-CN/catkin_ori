@@ -1145,7 +1145,7 @@ void PlanManager::simulateHardSwitchAtCurrentPosition(double current_time) {
   Eigen::Vector2d current_traj_pos = trajContainer.getPos(current_time);
   
   // 假设有新轨迹需要切换（这里模拟新轨迹起点）
-  Eigen::Vector2d new_traj_start = targetPos;  // 假设新轨迹指向目标点
+  Eigen::Vector2d new_traj_start = targetPose.head(2);  // 假设新轨迹指向目标点
   
   ROS_WARN("=== 硬切换分析（基于实际odom数据）===");
   ROS_WARN("当前实际位置: [%.3f, %.3f], 偏航角: %.3f", 
@@ -1221,22 +1221,7 @@ void PlanManager::compareSplicingMethods() {
   // 模拟硬切换：假设在当前位置直接切换到新轨迹
   simulateHardSwitchAtCurrentPosition(currentTime);
   
-  // 计算改进百分比
-  double vel_improvement = (hard_switch_metrics_.max_velocity - spliced_metrics_.max_velocity) / hard_switch_metrics_.max_velocity * 100.0;
-  double acc_improvement = (hard_switch_metrics_.max_acceleration - spliced_metrics_.max_acceleration) / hard_switch_metrics_.max_acceleration * 100.0;
-  double jerk_improvement = (hard_switch_metrics_.max_jerk - spliced_metrics_.max_jerk) / hard_switch_metrics_.max_jerk * 100.0;
-  double comfort_improvement = (spliced_metrics_.comfort_index - hard_switch_metrics_.comfort_index) / hard_switch_metrics_.comfort_index * 100.0;
-  double smoothness_improvement = (spliced_metrics_.smoothness_index - hard_switch_metrics_.smoothness_index) / hard_switch_metrics_.smoothness_index * 100.0;
-  double energy_improvement = (hard_switch_metrics_.energy_consumption - spliced_metrics_.energy_consumption) / hard_switch_metrics_.energy_consumption * 100.0;
   
-  ROS_INFO("=== Performance Improvements (Splicing vs Hard Switch) ===");
-  ROS_INFO("Max Velocity: %.1f%% improvement", vel_improvement);
-  ROS_INFO("Max Acceleration: %.1f%% improvement", acc_improvement);
-  ROS_INFO("Max Jerk: %.1f%% improvement", jerk_improvement);
-  ROS_INFO("Comfort Index: %.1f%% improvement", comfort_improvement);
-  ROS_INFO("Smoothness Index: %.1f%% improvement", smoothness_improvement);
-  ROS_INFO("Energy Consumption: %.1f%% improvement", energy_improvement);
-  ROS_INFO("===========================================================");
 }
 
 void PlanManager::logTrajectoryMetrics(const trajectory_metrics::TrajectoryMetrics& metrics, const std::string& method_name) {
@@ -1248,22 +1233,5 @@ void PlanManager::logTrajectoryMetrics(const trajectory_metrics::TrajectoryMetri
   ROS_INFO("===============================");
 }
 
-void PlanManager::simulateHardSwitch(const plan_utils::TrajectoryContainer& oldTraj, 
-                                    const plan_utils::TrajectoryContainer& newTraj,
-                                    double switch_time) {
-  // 获取切换点的状态
-  Eigen::Vector2d old_vel = oldTraj.getdSigma(switch_time);
-  Eigen::Vector2d new_vel = newTraj.getdSigma(0.0);
-  Eigen::Vector2d old_acc = oldTraj.getddSigma(switch_time);
-  Eigen::Vector2d new_acc = newTraj.getddSigma(0.0);
-  
-  // 计算跳跃
-  double vel_jump, acc_jump;
-  trajectory_analyzer_.calculateSwitchingJumps(old_vel, new_vel, old_acc, new_acc, vel_jump, acc_jump);
-  
-  ROS_WARN("Hard Switch Analysis:");
-  ROS_WARN("Velocity Jump: %.6f m/s", vel_jump);
-  ROS_WARN("Acceleration Jump: %.6f m/s²", acc_jump);
-  ROS_WARN("Theoretical Jerk: INFINITE (discontinuous acceleration)");
-}
+
 
