@@ -1081,10 +1081,10 @@ void PlanManager::analyzeCurrentTrajectory() {
   }
   
   // 分析轨迹
-  current_metrics_ = trajectory_analyzer_.analyzeTrajectory(positions, velocities, accelerations, yaw_angles, dt);
+  trajectory_metrics::TrajectoryMetrics current_metrics = trajectory_analyzer_.analyzeTrajectory(positions, velocities, accelerations, yaw_angles, dt);
   
-  ROS_INFO("Current trajectory metrics (numerical diff) - Max Jerk: %.3f, Avg Jerk: %.3f, Comfort: %.3f", 
-           current_metrics_.max_jerk, current_metrics_.avg_jerk, current_metrics_.comfort_index);
+  ROS_INFO("Current trajectory metrics (numerical diff) - Max Jerk: %.3f", 
+           current_metrics.max_jerk);
 }
 
 void PlanManager::analyzeTrajectorySegment(double start_time, double end_time, const std::string& segment_name) {
@@ -1128,8 +1128,6 @@ void PlanManager::analyzeTrajectorySegment(double start_time, double end_time, c
   ROS_INFO("Max Acceleration: %.3f m/s²", segment_metrics.max_acceleration);
   ROS_INFO("Max Jerk: %.3f m/s³", segment_metrics.max_jerk);
   ROS_INFO("Max Yaw Rate: %.3f rad/s", segment_metrics.max_yaw_rate);
-  ROS_INFO("Max Yaw Acceleration: %.3f rad/s²", segment_metrics.max_yaw_acceleration);
-  ROS_INFO("Comfort Index: %.3f", segment_metrics.comfort_index);
 }
 
 void PlanManager::simulateHardSwitchAtCurrentPosition(double current_time) {
