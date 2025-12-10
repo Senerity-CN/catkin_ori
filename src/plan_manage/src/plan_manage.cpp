@@ -1142,21 +1142,23 @@ void PlanManager::simulateHardSwitchAtCurrentPosition(double current_time) {
   // 获取当前轨迹在此时刻的位置（用于对比）
   Eigen::Vector2d current_traj_pos = trajContainer.getPos(current_time);
   
-  // 假设有新轨迹需要切换（这里模拟新轨迹起点）
-  Eigen::Vector2d new_traj_start = targetPose.head(2);  // 假设新轨迹指向目标点
+  // 硬切换：机器人从当前位置B跳到新轨迹起点A
+  // 新轨迹起点 = 触发重规划时的位置 = 当前轨迹上的某点
+  Eigen::Vector2d replan_trigger_pos = current_traj_pos;  // 简化：用当前轨迹位置作为新轨迹起点
   
-  ROS_WARN("=== 硬切换分析（基于实际odom数据）===");
-  ROS_WARN("当前实际位置: [%.3f, %.3f], 偏航角: %.3f", 
+  ROS_WARN("=== Hard Switch Analysis (Based on Real Odom Data) ===");
+  ROS_WARN("Current Real Position (B): [%.3f, %.3f], Yaw: %.3f", 
            current_real_pos[0], current_real_pos[1], current_real_yaw);
-  ROS_WARN("当前轨迹位置: [%.3f, %.3f]", current_traj_pos[0], current_traj_pos[1]);
+  ROS_WARN("New Traj Start Point (A): [%.3f, %.3f]", replan_trigger_pos[0], replan_trigger_pos[1]);
+  ROS_WARN("Position Jump Distance: %.3f m", (replan_trigger_pos - current_real_pos).norm());
   
-  // 计算硬切换的瞬时速度跳跃（从当前位置到新轨迹起点）
-  Eigen::Vector2d distance_to_new_traj = new_traj_start - current_real_pos;
-  double distance_magnitude = distance_to_new_traj.norm();
+  // 硬切换：瞬间从位置B跳到位置A，然后按新轨迹的速度运行
+  Eigen::Vector2d position_jump = replan_trigger_pos - current_real_pos;
+  Eigen::Vector2d new_traj_velocity = trajContainer.getdSigma(0.0);  // 新轨迹起点的速度
+  double jump_distance = position_jump.norm();
   
-  // 硬切换：瞬间从当前位置跳到新轨迹
-  Eigen::Vector2d hard_switch_velocity = distance_to_new_traj / dt;
-  double max_velocity_hard_switch = hard_switch_velocity.norm();
+  // 硬切换包含两个冲击：1)位置跳跃 2)速度跳跃
+  double max_velocity_hard_switch = new_traj_velocity.norm();
   
   // 假设当前速度（通过数值微分估算）
   static Eigen::Vector2d prev_odom_pos = current_real_pos;
@@ -1169,25 +1171,24 @@ void PlanManager::simulateHardSwitchAtCurrentPosition(double current_time) {
   first_call = false;
   prev_odom_pos = current_real_pos;
   
-  // 计算硬切换的加速度跳跃
-  Eigen::Vector2d acceleration_jump = (hard_switch_velocity - current_velocity) / dt;
+  // 计算硬切换的加速度跳跃（从当前速度到新轨迹起点速度）
+  Eigen::Vector2d acceleration_jump = (new_traj_velocity - current_velocity) / dt;
   double max_acceleration_hard_switch = acceleration_jump.norm();
   
   // 计算硬切换的加加速度（理论上无穷大）
   double max_jerk_hard_switch = max_acceleration_hard_switch / dt;
   
-  ROS_WARN("--- 硬切换瞬时指标 ---");
-  ROS_WARN("距离跳跃: %.3f m", distance_magnitude);
-  ROS_WARN("最大瞬时速度: %.3f m/s", max_velocity_hard_switch);
-  ROS_WARN("最大瞬时加速度: %.3f m/s²", max_acceleration_hard_switch);
-  ROS_WARN("最大瞬时加加速度: %.1f m/s³", max_jerk_hard_switch);
+  ROS_WARN("--- Hard Switch Instantaneous Metrics ---");
+  ROS_WARN("Position Jump Distance: %.3f m", jump_distance);
+  ROS_WARN("Velocity Jump Magnitude: %.3f m/s", (new_traj_velocity - current_velocity).norm());
+  ROS_WARN("Max Instantaneous Acceleration: %.3f m/s²", max_acceleration_hard_switch);
+  ROS_WARN("Max Instantaneous Jerk: %.1f m/s³", max_jerk_hard_switch);
   
-  // 对比拼接轨迹的平滑过渡
-  ROS_WARN("--- 拼接轨迹优势 ---");
-  ROS_WARN("平滑过渡消除位置跳跃");
-  ROS_WARN("速度连续性保持");
-  ROS_WARN("加速度连续性保持");
-  ROS_WARN("加加速度控制在合理范围内 (<1.0 m/s³)");
+  ROS_WARN("--- Spliced Trajectory Advantages ---");
+  ROS_WARN("No position jump - smooth spatial continuity");
+  ROS_WARN("No velocity jump - smooth velocity continuity");
+  ROS_WARN("No acceleration jump - smooth acceleration continuity");
+  ROS_WARN("Jerk controlled within reasonable range (<1.0 m/s³)");
 }
 
 void PlanManager::compareSplicingMethods() {
