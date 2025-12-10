@@ -147,16 +147,13 @@ namespace plan_manage
         
         // Trajectory analysis functions
         trajectory_metrics::TrajectoryAnalyzer trajectory_analyzer_;
-        trajectory_metrics::TrajectoryMetrics current_metrics_;
-        trajectory_metrics::TrajectoryMetrics spliced_metrics_;
-        trajectory_metrics::TrajectoryMetrics hard_switch_metrics_;
         
         void analyzeCurrentTrajectory();
+        void analyzeTrajectorySegment(double start_time, double end_time, const std::string& segment_name);
         void compareSplicingMethods();
         void logTrajectoryMetrics(const trajectory_metrics::TrajectoryMetrics& metrics, const std::string& method_name);
-        void simulateHardSwitch(const plan_utils::TrajectoryContainer& oldTraj, 
-                              const plan_utils::TrajectoryContainer& newTraj,
-                              double switch_time);
+        
+        void simulateHardSwitchAtCurrentPosition(double current_time);
     };
 }
 
