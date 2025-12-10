@@ -15,6 +15,7 @@
 #include <nav_msgs/Odometry.h>
 #include <traj_optimizer/traj_optimizer.h>
 #include <nav_msgs/OccupancyGrid.h>
+#include <plan_manage/trajectory_metrics.h>
 #include <Eigen/Core>
 #define BUDGET 0.1
 namespace plan_manage
@@ -143,6 +144,19 @@ namespace plan_manage
         // Visualization functions for trajectory splicing
         void publishSplicingTrajectory(const Eigen::VectorXd& coeff_x, const Eigen::VectorXd& coeff_y, 
                                      double duration, const Eigen::Vector3d& start_pos);
+        
+        // Trajectory analysis functions
+        trajectory_metrics::TrajectoryAnalyzer trajectory_analyzer_;
+        trajectory_metrics::TrajectoryMetrics current_metrics_;
+        trajectory_metrics::TrajectoryMetrics spliced_metrics_;
+        trajectory_metrics::TrajectoryMetrics hard_switch_metrics_;
+        
+        void analyzeCurrentTrajectory();
+        void compareSplicingMethods();
+        void logTrajectoryMetrics(const trajectory_metrics::TrajectoryMetrics& metrics, const std::string& method_name);
+        void simulateHardSwitch(const plan_utils::TrajectoryContainer& oldTraj, 
+                              const plan_utils::TrajectoryContainer& newTraj,
+                              double switch_time);
     };
 }
 

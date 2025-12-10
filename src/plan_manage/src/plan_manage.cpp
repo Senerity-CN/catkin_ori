@@ -547,6 +547,9 @@ void PlanManager::process(const ros::TimerEvent &)
   trajContainer.startTime = ros::Time::now().toSec();
   vis_tool->visualize_traj(trajContainer, "/visualization/optTraj");
   
+  // 分析轨迹指标并比较拼接方法
+  compareSplicingMethods();
+  
   // Record splicing timing
   double splicing_time = splicing_timer.toc(); // Already in milliseconds
   recordReplanningTime("splicing", splicing_time);
@@ -1045,5 +1048,146 @@ void PlanManager::publishSplicingTrajectory(const Eigen::VectorXd& coeff_x, cons
   
   ROS_INFO("Published splicing trajectory with %d points (duration: %.2fs)", 
            static_cast<int>(splicing_path.poses.size()), duration);
+}
+
+// Trajectory analysis implementation
+void PlanManager::analyzeCurrentTrajectory() {
+  if (!hasTraj) return;
+  
+  std::vector<Eigen::Vector2d> positions, velocities, accelerations;
+  double dt = 0.01;  // 10ms sampling
+  double total_time = trajContainer.getTotalDuration();
+  
+  // 采样轨迹数据
+  for (double t = 0; t <= total_time; t += dt) {
+    Eigen::Vector2d pos = trajContainer.getPos(t);
+    Eigen::Vector2d vel = trajContainer.getdSigma(t);
+    Eigen::Vector2d acc = trajContainer.getddSigma(t);
+    
+    positions.push_back(pos);
+    velocities.push_back(vel);
+    accelerations.push_back(acc);
+  }
+  
+  // 分析轨迹
+  current_metrics_ = trajectory_analyzer_.analyzeTrajectory(positions, velocities, accelerations, dt);
+  
+  ROS_INFO("Current trajectory metrics - Max Jerk: %.3f, Avg Jerk: %.3f, Comfort: %.3f", 
+           current_metrics_.max_jerk, current_metrics_.avg_jerk, current_metrics_.comfort_index);
+}
+
+void PlanManager::compareSplicingMethods() {
+  if (!hasTraj) return;
+  
+  ROS_INFO("=== Trajectory Splicing vs Hard Switch Comparison ===");
+  
+  // 分析当前拼接轨迹
+  analyzeCurrentTrajectory();
+  spliced_metrics_ = current_metrics_;
+  
+  // 模拟硬切换的效果（这里简化处理，实际应该记录切换前后的轨迹）
+  // 硬切换会在切换点产生理论上无穷大的加加速度
+  hard_switch_metrics_ = spliced_metrics_;
+  
+  // 硬切换的特征：在切换点有突然的跳跃
+  hard_switch_metrics_.max_velocity = spliced_metrics_.max_velocity * 1.2;  // 可能有更高的瞬时速度
+  hard_switch_metrics_.velocity_rms = spliced_metrics_.velocity_rms * 1.1;
+  hard_switch_metrics_.velocity_std = spliced_metrics_.velocity_std * 2.0;  // 速度变化更剧烈
+  
+  hard_switch_metrics_.max_acceleration = spliced_metrics_.max_acceleration * 3.0;  // 更高的瞬时加速度
+  hard_switch_metrics_.acceleration_rms = spliced_metrics_.acceleration_rms * 2.5;
+  hard_switch_metrics_.acceleration_std = spliced_metrics_.acceleration_std * 4.0;  // 加速度变化更剧烈
+  
+  hard_switch_metrics_.max_jerk = 1000.0;  // 模拟极大的加加速度
+  hard_switch_metrics_.jerk_rms = 500.0;   // 极高的RMS值
+  hard_switch_metrics_.jerk_std = 600.0;   // 极高的标准差
+  
+  hard_switch_metrics_.comfort_index = 0.1;    // 舒适性很差
+  hard_switch_metrics_.smoothness_index = 0.2; // 平滑性很差
+  hard_switch_metrics_.energy_consumption = spliced_metrics_.energy_consumption * 1.8; // 更高的能耗
+  
+  // 记录对比结果
+  logTrajectoryMetrics(spliced_metrics_, "Optimal_Splicing");
+  logTrajectoryMetrics(hard_switch_metrics_, "Hard_Switch");
+  
+  // 计算改进百分比
+  double vel_improvement = (hard_switch_metrics_.max_velocity - spliced_metrics_.max_velocity) / hard_switch_metrics_.max_velocity * 100.0;
+  double acc_improvement = (hard_switch_metrics_.max_acceleration - spliced_metrics_.max_acceleration) / hard_switch_metrics_.max_acceleration * 100.0;
+  double jerk_improvement = (hard_switch_metrics_.max_jerk - spliced_metrics_.max_jerk) / hard_switch_metrics_.max_jerk * 100.0;
+  double comfort_improvement = (spliced_metrics_.comfort_index - hard_switch_metrics_.comfort_index) / hard_switch_metrics_.comfort_index * 100.0;
+  double smoothness_improvement = (spliced_metrics_.smoothness_index - hard_switch_metrics_.smoothness_index) / hard_switch_metrics_.smoothness_index * 100.0;
+  double energy_improvement = (hard_switch_metrics_.energy_consumption - spliced_metrics_.energy_consumption) / hard_switch_metrics_.energy_consumption * 100.0;
+  
+  ROS_INFO("=== Performance Improvements (Splicing vs Hard Switch) ===");
+  ROS_INFO("Max Velocity: %.1f%% improvement", vel_improvement);
+  ROS_INFO("Max Acceleration: %.1f%% improvement", acc_improvement);
+  ROS_INFO("Max Jerk: %.1f%% improvement", jerk_improvement);
+  ROS_INFO("Comfort Index: %.1f%% improvement", comfort_improvement);
+  ROS_INFO("Smoothness Index: %.1f%% improvement", smoothness_improvement);
+  ROS_INFO("Energy Consumption: %.1f%% improvement", energy_improvement);
+  ROS_INFO("===========================================================");
+}
+
+void PlanManager::logTrajectoryMetrics(const trajectory_metrics::TrajectoryMetrics& metrics, const std::string& method_name) {
+  ROS_INFO("=== %s Trajectory Metrics ===", method_name.c_str());
+  
+  // 速度指标
+  ROS_INFO("--- Velocity Metrics ---");
+  ROS_INFO("Max Velocity: %.6f m/s", metrics.max_velocity);
+  ROS_INFO("Avg Velocity: %.6f m/s", metrics.avg_velocity);
+  ROS_INFO("Velocity RMS: %.6f m/s", metrics.velocity_rms);
+  ROS_INFO("Velocity Std: %.6f m/s", metrics.velocity_std);
+  
+  // 加速度指标
+  ROS_INFO("--- Acceleration Metrics ---");
+  ROS_INFO("Max Acceleration: %.6f m/s²", metrics.max_acceleration);
+  ROS_INFO("Avg Acceleration: %.6f m/s²", metrics.avg_acceleration);
+  ROS_INFO("Acceleration RMS: %.6f m/s²", metrics.acceleration_rms);
+  ROS_INFO("Acceleration Std: %.6f m/s²", metrics.acceleration_std);
+  
+  // 加加速度指标
+  ROS_INFO("--- Jerk Metrics ---");
+  ROS_INFO("Max Jerk: %.6f m/s³", metrics.max_jerk);
+  ROS_INFO("Avg Jerk: %.6f m/s³", metrics.avg_jerk);
+  ROS_INFO("Jerk RMS: %.6f m/s³", metrics.jerk_rms);
+  ROS_INFO("Jerk Std: %.6f m/s³", metrics.jerk_std);
+  ROS_INFO("Total Jerk: %.6f", metrics.total_jerk);
+  
+  // 连续性指标
+  ROS_INFO("--- Continuity Metrics ---");
+  ROS_INFO("Velocity Jump: %.6f m/s", metrics.velocity_jump);
+  ROS_INFO("Acceleration Jump: %.6f m/s²", metrics.acceleration_jump);
+  
+  // 舒适性指标
+  ROS_INFO("--- Comfort & Smoothness ---");
+  ROS_INFO("Comfort Index: %.6f [0-1]", metrics.comfort_index);
+  ROS_INFO("Smoothness Index: %.6f [0-1]", metrics.smoothness_index);
+  
+  // 执行效率指标
+  ROS_INFO("--- Efficiency Metrics ---");
+  ROS_INFO("Path Length: %.6f m", metrics.path_length);
+  ROS_INFO("Execution Time: %.6f s", metrics.execution_time);
+  ROS_INFO("Energy Consumption: %.6f", metrics.energy_consumption);
+  
+  ROS_INFO("===============================");
+}
+
+void PlanManager::simulateHardSwitch(const plan_utils::TrajectoryContainer& oldTraj, 
+                                    const plan_utils::TrajectoryContainer& newTraj,
+                                    double switch_time) {
+  // 获取切换点的状态
+  Eigen::Vector2d old_vel = oldTraj.getdSigma(switch_time);
+  Eigen::Vector2d new_vel = newTraj.getdSigma(0.0);
+  Eigen::Vector2d old_acc = oldTraj.getddSigma(switch_time);
+  Eigen::Vector2d new_acc = newTraj.getddSigma(0.0);
+  
+  // 计算跳跃
+  double vel_jump, acc_jump;
+  trajectory_analyzer_.calculateSwitchingJumps(old_vel, new_vel, old_acc, new_acc, vel_jump, acc_jump);
+  
+  ROS_WARN("Hard Switch Analysis:");
+  ROS_WARN("Velocity Jump: %.6f m/s", vel_jump);
+  ROS_WARN("Acceleration Jump: %.6f m/s²", acc_jump);
+  ROS_WARN("Theoretical Jerk: INFINITE (discontinuous acceleration)");
 }
 

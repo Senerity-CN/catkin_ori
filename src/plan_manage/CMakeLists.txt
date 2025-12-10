@@ -116,6 +116,7 @@ catkin_package(
 
 add_library(plan_manage
     src/plan_manage.cpp
+    src/trajectory_metrics.cpp
 )
 target_link_libraries(plan_manage 
     kino_astar
